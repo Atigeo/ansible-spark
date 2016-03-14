@@ -1,0 +1,38 @@
+---
+# tasks file for ansible-spark
+
+- name: Creat spark user with key
+  user: name={{ spark_user }} generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
+  when: ansible_hostname == "{{ spark_master }}"
+
+- name: Load spark users public key from master
+  command: cat ~/.ssh/id_rsa.pub
+  register: pub_key
+  when: ansible_hostname == "{{ spark_master }}"
+
+- name: Create spark user on workers
+  user: name={{ spark_user }}
+    
+- name: Add authorized key
+  authorized_key: >
+    user={{ spark_user }}
+    key={{ pub_key }}
+
+- name: download binaries
+  get_url: >
+    url={{ spark_url }} 
+    dest=/tmp/ 
+
+- name: Install spark 
+  unarchive: >
+    copy=no 
+    dest={{ install_dir}} 
+    src=/tmp/{{ spark_release }}
+
+- name: create /opt/spark link
+  file: >
+    src={{ install_dir }}/{{ spark_release }} 
+    dest={{ spark_home }}
+    state=link
+    owner={{ spark_user }}
+    mode=644

@@ -1,0 +1,92 @@
+#!/bin/bash
+# chkconfig: 2345 80 20
+# description: Spark Master and Slaves services \
+#source /etc/xpatterns/xpatterns.ini
+USER={{ spark_user }}
+NAME=spark
+DESC="spark"
+SPARK_HOME={{ spark_home }}
+DAEMON=sbin/start-all.sh
+STOP_DAEMON=sbin/stop-all.sh
+START_LOG=spark_start.log
+STOP_LOG=spark_stop.log
+
+#Helper functions
+start() {
+        su - $USER -c "cd $SPARK_HOME; $DAEMON" > $START_LOG 2>&1 < /dev/null &
+        sleep 3
+}
+
+stop() {
+        su - $USER -c "cd $SPARK_HOME; $STOP_DAEMON" > $STOP_LOG 2>&1 < /dev/null &
+        sleep 5
+        pid_master=$(ps aux | grep org.apache.spark.deploy.master.Master | grep -v grep | awk '{print $2}')
+        if [ -z "$pid_master" ]; then
+                echo "spark-master stopped"
+        else
+                echo "kill spark-master pid $pid_master"
+                kill -15 $pid_master
+        fi
+        pid_slave=$(ps aux | grep org.apache.spark.deploy.worker.Worker | grep -v grep | awk '{print $2}')
+        if [ -z "$pid_slave" ]; then
+                echo "spark-slave stopped"
+        else
+                echo "kill spark-slave pid $pid_slave"
+                kill -15 $pid_slave
+        fi
+}
+
+status() {
+        pid_master=$(ps aux | grep org.apache.spark.deploy.master.Master | grep -v grep | awk '{print $2}')
+        if [ -z "$pid_master" ]; then
+                echo "spark-master stopped"
+        else
+                echo "spark-master is running pid $pid_master"
+        fi
+        echo -n "SALVES:"
+        for slave in $(cat $SPARK_HOME/conf/slaves | grep -v "#"); do
+            slave_pid=$(su - $USER -c "ssh $USER@$slave ps aux | grep org.apache.spark.deploy.worker.Worker | grep -v grep" | awk '{print $2}')
+            if [ -z "$slave_pid" ]; then
+                echo "spark-slave on $slave stopped"
+            else
+                echo "spark-slave started on $slave - pid $slave_pid"
+            fi
+
+        done
+}
+
+case "$1" in
+  start)
+        echo -n "Starting $DESC: "
+        start
+        echo "$NAME started."
+        ;;
+  stop)
+        echo -n "Stopping $DESC: "
+        stop
+        echo "$NAME stopped."
+        ;;
+  restart)
+        echo -n "Restarting $DESC: "
+        #set +e
+        stop
+        #set -e
+        sleep 5
+        start
+
+        echo "$NAME restarted."
+        ;;
+  status)
+        echo -n "Status of Spark-Master: "
+        status
+	;;
+  *)
+        N=/etc/init.d/$NAME
+        echo "Usage: $N {start|stop|restart|status}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
+
+

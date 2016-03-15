@@ -1,0 +1,3 @@
+{% for host in groups['spark-nodes'] %}
+     {{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}
+{% endfor %}

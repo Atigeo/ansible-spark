@@ -4,7 +4,7 @@
 # Spark version and hadoop build
 spark_version: 1.6.0
 hadoop_version: 2.6
-spark_release: spark-{{ spark_version }}-bin-{{ hadoop_version }}.tgz
+spark_release: spark-{{ spark_version }}-bin-hadoop{{ hadoop_version }}.tgz
 spark_url: https://s3.amazonaws.com/xpatterns/dependencies/spark/{{ spark_release }}
 
 # The host name of the spark master
@@ -16,3 +16,6 @@ spark_home: /opt/spark
 
 # User to run spark as
 spark_user: spark
+
+# Hadoop conf
+#hadoop_conf_dir: /opt/hadoop

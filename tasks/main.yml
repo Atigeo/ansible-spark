@@ -1,22 +1,28 @@
 ---
 # tasks file for ansible-spark
 
-- name: Creat spark user with key
+- name: Creat spark user with key on master
   user: name={{ spark_user }} generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
-  when: ansible_hostname == "{{ spark_master }}"
+  when: inventory_hostname == 'spark-master'
 
 - name: Load spark users public key from master
-  command: cat ~/.ssh/id_rsa.pub
+  command: cat /home/{{ spark_user }}/.ssh/id_rsa.pub
   register: pub_key
-  when: ansible_hostname == "{{ spark_master }}"
+  when: inventory_hostname == 'spark-master'
+
+- debug: var=hostvars['spark-master']['pub_key']['stdout']
 
 - name: Create spark user on workers
   user: name={{ spark_user }}
+  with_items:
+    - "{{ groups['spark-nodes'] }}"
     
-- name: Add authorized key
+- name: Add authorized key to all spark nodes
   authorized_key: >
     user={{ spark_user }}
-    key={{ pub_key }}
+    key={{ hostvars['spark-master']['pub_key']['stdout'] }}
+  with_items:
+    - "{{ groups['spark-nodes'] }}"
 
 - name: download binaries
   get_url: >
@@ -28,11 +34,51 @@
     copy=no 
     dest={{ install_dir}} 
     src=/tmp/{{ spark_release }}
+    owner={{ spark_user }}
+    group={{ spark_user }}
+    mode=755
 
-- name: create /opt/spark link
+- name: Create /opt/spark link
   file: >
-    src={{ install_dir }}/{{ spark_release }} 
+    src={{ install_dir }}/spark-{{ spark_version }}-bin-hadoop{{ hadoop_version }} 
     dest={{ spark_home }}
     state=link
     owner={{ spark_user }}
-    mode=644
+    group={{ spark_user }}
+    mode=755
+
+- name: Setup slaves file
+  template: >
+    src=templates/slaves 
+    dest={{ spark_home }}/conf/slaves
+    owner={{ spark_user }}
+    group={{ spark_user }}
+    mode=755
+  when: inventory_hostname == 'spark-master'
+
+- name: Setup spark-env.sh
+  template: >
+    src=templates/spark-env.sh
+    dest={{ spark_home }}/conf/spark-env.sh
+    owner={{ spark_user }}
+    group={{ spark_user }}
+    mode=755
+
+- name: Setup spark-master service
+  template: >
+    src=templates/spark
+    dest=/etc/init.d/spark
+    owner=root
+    group=root
+    mode=755
+  when: inventory_hostname == 'spark-master'
+
+- name: Setup service
+  service: name=spark enabled=yes
+  notify: start-spark
+  when: inventory_hostname == 'spark-master'
+
+- name: Setup SPARK_HOME
+  lineinfile: >
+    dest=/etc/environment
+    line='SPARK_HOME={{ spark_home }}'

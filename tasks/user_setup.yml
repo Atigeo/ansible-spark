@@ -1,0 +1,25 @@
+---
+# Setup the user for spark
+
+- name: Creat spark user with key on master
+  user: name={{ spark_user }} generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
+  when: inventory_hostname == 'spark-master'
+
+- name: Load spark users public key from master
+  command: cat /home/{{ spark_user }}/.ssh/id_rsa.pub
+  register: pub_key
+  when: inventory_hostname == 'spark-master'
+
+- debug: var=hostvars['spark-master']['pub_key']['stdout']
+
+- name: Create spark user on workers
+  user: name={{ spark_user }}
+  with_items:
+    - "{{ groups['spark-nodes'] }}"
+
+- name: Add authorized key to all spark nodes
+  authorized_key: >
+    user={{ spark_user }}
+    key={{ hostvars['spark-master']['pub_key']['stdout'] }}
+  with_items:
+    - "{{ groups['spark-nodes'] }}"

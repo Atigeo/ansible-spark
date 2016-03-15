@@ -1,84 +1,11 @@
 ---
 # tasks file for ansible-spark
 
-- name: Creat spark user with key on master
-  user: name={{ spark_user }} generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
-  when: inventory_hostname == 'spark-master'
+- include: user_setup.yml
 
-- name: Load spark users public key from master
-  command: cat /home/{{ spark_user }}/.ssh/id_rsa.pub
-  register: pub_key
-  when: inventory_hostname == 'spark-master'
+- include: install_spark.yml
 
-- debug: var=hostvars['spark-master']['pub_key']['stdout']
+- include: configure_spark.yml
 
-- name: Create spark user on workers
-  user: name={{ spark_user }}
-  with_items:
-    - "{{ groups['spark-nodes'] }}"
-    
-- name: Add authorized key to all spark nodes
-  authorized_key: >
-    user={{ spark_user }}
-    key={{ hostvars['spark-master']['pub_key']['stdout'] }}
-  with_items:
-    - "{{ groups['spark-nodes'] }}"
-
-- name: download binaries
-  get_url: >
-    url={{ spark_url }} 
-    dest=/tmp/ 
-
-- name: Install spark 
-  unarchive: >
-    copy=no 
-    dest={{ install_dir}} 
-    src=/tmp/{{ spark_release }}
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
-
-- name: Create /opt/spark link
-  file: >
-    src={{ install_dir }}/spark-{{ spark_version }}-bin-hadoop{{ hadoop_version }} 
-    dest={{ spark_home }}
-    state=link
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
-
-- name: Setup slaves file
-  template: >
-    src=templates/slaves 
-    dest={{ spark_home }}/conf/slaves
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
-  when: inventory_hostname == 'spark-master'
-
-- name: Setup spark-env.sh
-  template: >
-    src=templates/spark-env.sh
-    dest={{ spark_home }}/conf/spark-env.sh
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
-
-- name: Setup spark-master service
-  template: >
-    src=templates/spark
-    dest=/etc/init.d/spark
-    owner=root
-    group=root
-    mode=755
-  when: inventory_hostname == 'spark-master'
-
-- name: Setup service
-  service: name=spark enabled=yes
-  notify: start-spark
-  when: inventory_hostname == 'spark-master'
-
-- name: Setup SPARK_HOME
-  lineinfile: >
-    dest=/etc/environment
-    line='SPARK_HOME={{ spark_home }}'
+- include: spark_service_redhat.yml
+  when: ansible_os_family == "RedHat"

@@ -2,18 +2,18 @@
 # Configure spark
 
 - name: Setup slaves file
-  template: >
-    src=templates/slaves
-    dest={{ spark_home }}/conf/slaves
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
-  when: inventory_hostname == 'spark-master'
+  template:
+    src: "templates/slaves"
+    dest: "{{ spark_home }}/conf/slaves"
+    owner: "{{ spark_user }}"
+    group: "{{ spark_user }}"
+    mode: 0755
+  when: inventory_hostname == 'spark-master-1'
 
 - name: Setup spark-env.sh
-  template: >
-    src=templates/spark-env.sh
-    dest={{ spark_home }}/conf/spark-env.sh
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
+  template:
+    src: "templates/spark-env.sh"
+    dest: "{{ spark_home }}/conf/spark-env.sh"
+    owner: "{{ spark_user }}"
+    group: "{{ spark_user }}"
+    mode: 0755

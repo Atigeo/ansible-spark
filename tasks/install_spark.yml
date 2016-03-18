@@ -2,29 +2,29 @@
 # Install spark binaries
 
 - name: download binaries
-  get_url: >
-    url={{ spark_url }}
-    dest=/tmp/
+  get_url:
+    url: "{{ spark_url }}"
+    dest: "/tmp/"
 
 - name: Install spark
-  unarchive: >
-    copy=no
-    dest={{ install_dir}}
-    src=/tmp/{{ spark_release }}
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
+  unarchive:
+    copy: no
+    dest: "{{ install_dir}}"
+    src: "/tmp/{{ spark_release }}"
+    owner: "{{ spark_user }}"
+    group: "{{ spark_user }}"
+    mode: 0755
 
 - name: Create /opt/spark link
-  file: >
-    src={{ install_dir }}/spark-{{ spark_version }}-bin-hadoop{{ hadoop_version }}
-    dest={{ spark_home }}
-    state=link
-    owner={{ spark_user }}
-    group={{ spark_user }}
-    mode=755
+  file:
+    src: "{{ install_dir }}/spark-{{ spark_version }}-bin-hadoop{{ hadoop_version }}"
+    dest: "{{ spark_home }}"
+    state: link
+    owner: "{{ spark_user }}"
+    group: "{{ spark_user }}"
+    mode: 0755
 
 - name: Setup SPARK_HOME
-  lineinfile: >
-    dest=/etc/environment
-    line='SPARK_HOME={{ spark_home }}'
+  lineinfile:
+    dest: "/etc/environment"
+    line: "SPARK_HOME={{ spark_home }}"

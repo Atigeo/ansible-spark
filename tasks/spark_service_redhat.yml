@@ -2,16 +2,18 @@
 # Configure spark as a service
 
 - name: Setup spark-master service
-  template: >
-    src=templates/spark
-    dest=/etc/init.d/spark
-    owner=root
-    group=root
-    mode=755
-  when: inventory_hostname == 'spark-master'
+  template:
+    src: "templates/spark"
+    dest: "/etc/init.d/spark"
+    owner: "root"
+    group: "root"
+    mode: 0755
+  when: inventory_hostname == 'spark-master-1'
 
 - name: Setup service
-  service: name=spark enabled=yes
+  service: 
+    name: "spark"
+    enabled: yes
   notify: start-spark
-  when: inventory_hostname == 'spark-master'
+  when: inventory_hostname == 'spark-master-1'
 
